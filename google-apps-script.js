@@ -103,33 +103,7 @@ function getOrCreateOrderSheet(ss, sheetName, insertIndex) {
     ];
 
     sheet.appendRow(headers);
-
-    var headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setBackground('#059669'); // สีเขียวมรกตเข้ม
-    headerRange.setFontColor('#ffffff');
-    headerRange.setFontWeight('bold');
-    headerRange.setHorizontalAlignment('center');
-    sheet.setFrozenRows(1);
-
-    sheet.setColumnWidth(1, 210);
-    sheet.setColumnWidth(2, 160);
-    sheet.setColumnWidth(3, 110);
-    sheet.setColumnWidth(4, 110);
-    sheet.setColumnWidth(5, 105);
-    sheet.setColumnWidth(6, 105);
-    sheet.setColumnWidth(7, 105);
-    sheet.setColumnWidth(8, 95);
-    sheet.setColumnWidth(9, 340);
-
-    // เปิด Filter Dropdown ที่หัวตาราง
-    try {
-      if (!sheet.getFilter()) {
-        sheet.getRange(1, 1, 1, headers.length).createFilter();
-      }
-    } catch (e) {}
-
-    // ใส่แถวยอดรวมเริ่มต้น (0 บิล)
-    updateOrderSheetTotals(sheet);
+    applyOrderSheetTemplateStyle(sheet);
   }
   return sheet;
 }
@@ -191,6 +165,130 @@ function cleanExtraSheets(ss) {
 }
 
 // ==========================================
+// 🎨 จัดการแถบสีสลับแถว (Alternating Row Banding) สไตล์เขียวอ่อนสบายตา
+// ==========================================
+function ensureSheetBanding(sheet, dataEndRow) {
+  if (!sheet) return;
+  try {
+    var bandings = sheet.getBandings();
+    for (var b = 0; b < bandings.length; b++) {
+      bandings[b].remove();
+    }
+    if (dataEndRow >= 2) {
+      var dataRange = sheet.getRange(1, 1, dataEndRow, 9);
+      var banding = dataRange.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREEN, true, false);
+      banding.setHeaderRowColor('#059669'); // สีเขียวมรกตเข้ม
+      banding.setFirstRowColor('#ffffff');  // แถวแรก: ขาว
+      banding.setSecondRowColor('#f0fdf4'); // แถวสอง: เขียวอ่อนละมุน
+    }
+  } catch (e) {}
+}
+
+// ==========================================
+// 🎨 ปรับแต่ง Template ของชีตออเดอร์ให้เหมือนชีต "รวมออเดอร์ทั้งหมด" 100%
+// ==========================================
+function applyOrderSheetTemplateStyle(sheet) {
+  if (!sheet) return;
+
+  var headers = [
+    'เลขที่บิล',
+    'วัน/เวลา',
+    'ประเภท',
+    'ยอดเงินรวม',
+    'ต้นทุนรวม',
+    'กำไร',
+    'รับเงิน',
+    'ทอนเงิน',
+    'รายการสินค้า'
+  ];
+
+  // 1. หัวตาราง (Header)
+  var headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setBackground('#059669'); // สีเขียวมรกตเข้ม
+  headerRange.setFontColor('#ffffff');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setVerticalAlignment('middle');
+  sheet.setRowHeight(1, 32);
+  sheet.setFrozenRows(1);
+
+  // 2. ความกว้างคอลัมน์มาตรฐาน
+  var colWidths = [210, 160, 110, 110, 105, 105, 105, 95, 340];
+  for (var c = 0; c < colWidths.length; c++) {
+    sheet.setColumnWidth(c + 1, colWidths[c]);
+  }
+
+  // 3. ตรวจสอบและเปิด Filter Dropdown
+  try {
+    if (!sheet.getFilter()) {
+      sheet.getRange(1, 1, 1, headers.length).createFilter();
+    }
+  } catch (e) {}
+
+  // 4. ตรวจสอบข้อมูลและจัดรูปแบบเซลล์ข้อมูล
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    var lastVal = String(sheet.getRange(lastRow, 1).getValue() || '');
+    var dataEndRow = lastRow;
+    if (lastVal.indexOf('ยอดรวมทั้งหมด') !== -1) {
+      dataEndRow = lastRow - 1;
+    }
+
+    if (dataEndRow >= 2) {
+      var numRows = dataEndRow - 1;
+      // ล้างสีตกค้างและรีเซ็ตสไตล์ในแถวข้อมูล
+      var allDataRange = sheet.getRange(2, 1, numRows, headers.length);
+      allDataRange.setBackground(null);
+      allDataRange.setFontColor('#1f2937');
+      allDataRange.setFontWeight('normal');
+      allDataRange.setBorder(false, false, false, false, false, false);
+      allDataRange.setVerticalAlignment('middle');
+
+      // การจัดตำแหน่งและรูปแบบตัวเลข
+      sheet.getRange(2, 1, numRows, 1).setHorizontalAlignment('left');
+      sheet.getRange(2, 2, numRows, 1).setHorizontalAlignment('center');
+      sheet.getRange(2, 3, numRows, 1).setHorizontalAlignment('center');
+      sheet.getRange(2, 4, numRows, 5).setHorizontalAlignment('right').setNumberFormat('#,##0');
+      sheet.getRange(2, 9, numRows, 1).setHorizontalAlignment('left');
+
+      // ใส่แถบสลับสี (Alternating Row Banding)
+      ensureSheetBanding(sheet, dataEndRow);
+    }
+  }
+
+  // 5. จัดแถวสรุปผลรวมท้ายตาราง
+  updateOrderSheetTotals(sheet);
+}
+
+// ==========================================
+// 🎨 ปรับแต่งทุกชีตออเดอร์ในไฟล์ให้ใช้ Template เดียวกันทั้งหมด
+// ==========================================
+function formatAllOrderSheetsToTemplate(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  var datePattern = /^\d{2}-\d{2}-\d{4}$/;
+  var monthPattern = /^เดือน-\d{2}-\d{4}$/;
+
+  for (var i = 0; i < sheets.length; i++) {
+    var sh = sheets[i];
+    var name = sh.getName();
+    if (name === 'รวมออเดอร์ทั้งหมด' || datePattern.test(name) || monthPattern.test(name)) {
+      applyOrderSheetTemplateStyle(sh);
+    }
+  }
+}
+
+// สร้างเมนูบน Google Sheets อำนวยความสะดวกให้ผู้ใช้
+function onOpen() {
+  try {
+    var ui = SpreadsheetApp.getUi();
+    ui.createMenu('⚙️ ระบบ KANA POS')
+      .addItem('🎨 จัดระเบียบและปรับธีมสีทุกชีตให้เหมือนกัน', 'formatAllOrderSheetsToTemplate')
+      .addToUi();
+  } catch (e) {}
+}
+
+// ==========================================
 // 📊 อัปเดตแถวสรุปผลรวม (Total Row) ท้ายตาราง (High-Performance Batch Optimization)
 // ==========================================
 function updateOrderSheetTotals(sheet) {
@@ -208,6 +306,7 @@ function updateOrderSheetTotals(sheet) {
     sheet.getRange(2, 3).setHorizontalAlignment('center');
     sheet.getRange(2, 4, 1, 5).setNumberFormat('#,##0');
     zeroRange.setBorder(true, null, true, null, null, null, '#16a34a', SpreadsheetApp.BorderStyle.DOUBLE);
+    ensureSheetBanding(sheet, 1);
     return;
   }
 
@@ -219,6 +318,7 @@ function updateOrderSheetTotals(sheet) {
   }
 
   if (orderLastRow < 2) {
+    ensureSheetBanding(sheet, 1);
     return;
   }
 
@@ -253,6 +353,9 @@ function updateOrderSheetTotals(sheet) {
   sheet.getRange(totalRowIndex, 3).setHorizontalAlignment('center');
   sheet.getRange(totalRowIndex, 4, 1, 5).setNumberFormat('#,##0');
   totalRange.setBorder(true, null, true, null, null, null, '#16a34a', SpreadsheetApp.BorderStyle.DOUBLE);
+
+  // อัปเดตแถบสีสลับแถว (Row Banding) ให้ครอบคลุมแถวข้อมูล (แถว 1 ถึง orderLastRow)
+  ensureSheetBanding(sheet, orderLastRow);
 }
 
 // บันทึกออเดอร์ลงชีตที่ระบุ พร้อมจัดรูปแบบและอัปเดตยอดรวม (High-Performance In-Place Overwrite)
@@ -300,8 +403,13 @@ function appendOrderToSheet(sheet, order) {
     sanitizeForSheet(itemsSummary)
   ];
 
-  // ⚡ Batch write ออเดอร์ในแถวเดียว
-  sheet.getRange(targetRow, 1, 1, 9).setValues([orderRowValues]);
+  // ⚡ Batch write ออเดอร์ในแถวเดียว พร้อมเคลียร์สีพื้นหลังและเส้นขอบเดิมออก (ป้องกันสีเขียวของแถวสรุปติดค้าง)
+  var orderRowRange = sheet.getRange(targetRow, 1, 1, 9);
+  orderRowRange.setBackground(null);
+  orderRowRange.setFontColor('#1f2937');
+  orderRowRange.setFontWeight('normal');
+  orderRowRange.setBorder(false, false, false, false, false, false);
+  orderRowRange.setValues([orderRowValues]);
   sheet.getRange(targetRow, 1).setHorizontalAlignment('left');
   sheet.getRange(targetRow, 2).setHorizontalAlignment('center');
   sheet.getRange(targetRow, 3).setHorizontalAlignment('center');
@@ -324,6 +432,15 @@ function doGet(e) {
   } catch (lErr) {}
 
   try {
+    // สนับสนุนคำสั่งจัดระเบียบ Template ทุกชีตผ่าน GET action=format_template
+    if (e && e.parameter && e.parameter.action === 'format_template') {
+      formatAllOrderSheetsToTemplate(ss);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: 'จัดระเบียบและปรับ Template สีทุกชีตเรียบร้อยแล้ว'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     var prodSheet = ss.getSheetByName('_ระบบ_สินค้า') || getOrCreateProductSheet(ss);
     var expSheet = ss.getSheetByName('_ระบบ_รายจ่าย') || getOrCreateExpenseSheet(ss);
 
@@ -903,13 +1020,19 @@ function doPost(e) {
         if (!sh) return;
         var lastR = sh.getLastRow();
         if (lastR > 1) {
-          sh.getRange(2, 1, lastR - 1, sh.getLastColumn()).clearContent();
+          sh.getRange(2, 1, lastR - 1, sh.getLastColumn()).clearContent().clearFormat();
           if (lastR > 2) {
             try {
               sh.deleteRows(3, lastR - 2);
             } catch (delErr) {}
           }
         }
+        try {
+          var bandings = sh.getBandings();
+          for (var b = 0; b < bandings.length; b++) {
+            bandings[b].remove();
+          }
+        } catch (e) {}
         updateOrderSheetTotals(sh);
       }
 
@@ -1045,6 +1168,14 @@ function doPost(e) {
     }
 
     // 9. 🗑️ ลบบิลเดี่ยว (deleteSingleOrder / In-case Void) - สำหรับกรณียกเลิก หรือ ใส่เกิน พร้อมคืนสต็อก
+    if (action === 'format_template') {
+      formatAllOrderSheetsToTemplate(ss);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: 'จัดระเบียบและปรับ Template สีทุกชีตเรียบร้อยแล้ว'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === 'deleteSingleOrder') {
       var targetOrderNo = String(postData.orderNo || '').trim();
       var itemsToRestock = postData.items || [];
