@@ -338,13 +338,18 @@ export async function syncAllDataFromGoogleSheet(): Promise<SyncAllResult> {
           const expMonthStr = expDateStr.length >= 7 ? expDateStr.slice(0, 7) : ''
 
           const existingList = await db.expenses
-            .where('title')
-            .equals(exp.title)
-            .and((item) => item.createdAt === exp.createdAt)
+            .filter((item) => {
+              if (exp.expenseNo && item.expenseNo && item.expenseNo === exp.expenseNo) return true
+              if (item.title === exp.title && Math.abs(item.createdAt - exp.createdAt) < 2000) return true
+              return false
+            })
+
+
             .toArray()
 
           if (existingList.length === 0) {
             await db.expenses.add({
+              expenseNo: exp.expenseNo ? String(exp.expenseNo) : undefined,
               title: String(exp.title || ''),
               amount: Math.max(0, Number(exp.amount) || 0),
               category: String(exp.category || 'อื่นๆ'),
@@ -358,6 +363,7 @@ export async function syncAllDataFromGoogleSheet(): Promise<SyncAllResult> {
             const primary = existingList[0]
             if (primary.id) {
               await db.expenses.update(primary.id, {
+                expenseNo: exp.expenseNo ? String(exp.expenseNo) : primary.expenseNo,
                 amount: Math.max(0, Number(exp.amount) || 0),
                 category: String(exp.category || 'อื่นๆ'),
                 note: String(exp.note || ''),
@@ -542,6 +548,7 @@ export async function syncExpenseToGoogleSheet(expense: Expense) {
  * ลบรายการรายจ่ายออกจาก Google Sheets
  */
 export async function deleteExpenseFromGoogleSheet(expense: {
+  expenseNo?: string
   title: string
   amount?: number
   category?: string

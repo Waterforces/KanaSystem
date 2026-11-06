@@ -1,27 +1,24 @@
 /**
  * ========================================================
- * 🛒 Kana POS - Google Sheets Web API (Multi-Device Sync v6)
+ * 🛒 Kana POS - Google Sheets Web API (Multi-Device Sync v7)
  * ========================================================
- * ✨ คุณสมบัติใหม่และปรับปรุง:
- * 1. รองรับ 3 เลเยอร์ของชีตออเดอร์:
- *    - ชีตประจำวัน: ชื่อ DD-MM-YYYY (เช่น 01-11-2026) สร้างใหม่ทุกวัน
- *    - ชีตประจำเดือน: ชื่อ เดือน-MM-YYYY (เช่น เดือน-11-2026) สร้างใหม่ทุกเดือน
- *    - ชีตรวมออเดอร์ทั้งหมด: ชื่อ "รวมออเดอร์ทั้งหมด" แผ่นเดียว ต่อข้อมูลลงมาเรื่อยๆ
- * 2. ตารางรูปแบบมาตรฐาน (Tables):
- *    - มี Filter Dropdown (ตัวกรอง) ที่หัวตารางทุกคอลัมน์
- *    - จัดฟอร์แมตตัวเลขสกุลเงิน (#,##0) และ วัน/เวลา ชัดเจน
- *    - คำนวณและแสดงแถว "ยอดรวมทั้งหมด" (Total Row) ที่บรรทัดสุดท้าย (หากว่างให้แสดง 0 บิล)
- * 3. ระบบ Cascading Clear Data (กลุ่มใหญ่ลบกลุ่มย่อย):
- *    - ล้างทั้งหมด: ล้างชีตรวมออเดอร์ทั้งหมด + ทุกชีตประจำเดือน + ทุกชีตประจำวัน + ทุกรายจ่าย
- *    - ล้างเดือนนี้: ล้างชีตประจำเดือนนี้ + ล้างทุกชีตประจำวันในเดือนนี้ + ลบแถวเดือนนี้ในชีตรวม + ลบรายจ่ายเดือนนี้
- *    - ล้างวันนี้: ล้างชีตประจำวันนี้ + ลบแถววันนี้ในชีตเดือน + ลบแถววันนี้ในชีตรวม + ลบรายจ่ายวันนี้
- * 4. ระบบ Clear บิลเดี่ยว (deleteSingleOrder / In-case Void):
- *    - ลบเฉพาะบิลที่ต้องการออกจากทุกชีตที่เกี่ยวข้อง
- *    - คืนสต็อกสินค้ากลับเข้า _ระบบ_สินค้า อัตโนมัติ (Restock)
- *    - คำนวณยอดรวมท้ายตารางใหม่ทันที
- * 5. ป้องกัน Formula Injection สำหรับข้อความที่ขึ้นต้นด้วย =, +, -, @
- * 6. รองรับ Concurrency Lock (LockService) ป้องกันข้อมูลชนกัน
- * 7. ดึงประวัติบิลขายโดยตรงจาก "รวมออเดอร์ทั้งหมด" ป้องกันบิลผีย้อนกลับหลังถูกล้าง
+ * ✨ ฟีเจอร์ใหม่และระบบบัญชีรวม (Unified Income & Expense System):
+ * 1. บันทึกรายจ่ายลงชีตร่วมกับรายรับ (ออเดอร์) ทั้ง 3 ระดับ:
+ *    - ชีตประจำวัน (DD-MM-YYYY)
+ *    - ชีตประจำเดือน (เดือน-MM-YYYY)
+ *    - ชีตรวมออเดอร์ทั้งหมด ("รวมออเดอร์ทั้งหมด")
+ * 2. การจำแนกสีข้อมูลเพื่อความสบายตาและป้องกันการสับสน:
+ *    - แถวรายรับ (ออเดอร์): สีเขียวอ่อนพาสเทล (#f0fdf4) ตัวหนังสือ #14532d
+ *    - แถวรายจ่าย (Expense): สีแดงอ่อนพาสเทล (#fef2f2) ตัวหนังสือ #7f1d1d
+ *    - หัวตาราง (Header): สี Deep Slate Navy (#1e293b) ตัวหนังสือสีขาว
+ *    - แถวสรุปท้ายตาราง (Total Row): สี Light Slate (#f1f5f9) ตัวหนังสือเข้ม #0f172a
+ * 3. คำนวณเงินสุทธิคงเหลืออัตโนมัติ (Net Balance):
+ *    - แถวรายจ่ายใส่ยอดเงินรวมแบบติดลบ (-Math.abs(amount))
+ *    - สูตร =SUM(D2:D...) คำนวณ (รายรับรวม - รายจ่ายรวม = เงินสุทธิ) ทันที
+ * 4. กฎสิทธิ์เวลาเข้มงวด:
+ *    - เพิ่มรายจ่ายได้เฉพาะของ "วันปัจจุบัน (วันนี้)" เท่านั้น เพื่อความโปร่งใสทางบัญชี
+ * 5. Multi-Device 100% Sync: ซิงก์รายจ่ายและรายรับข้ามทุกเครื่องแบบ Realtime
+ * 6. รองรับ 3 เลเยอร์ของชีตออเดอร์ + Cascading Clear Data + Restock On Order Delete
  */
 
 var APP_SYNC_TOKEN = 'KANA_POS_SYNC_2026';
@@ -165,23 +162,49 @@ function cleanExtraSheets(ss) {
 }
 
 // ==========================================
-// 🎨 จัดการแถบสีสลับแถว (Alternating Row Banding) สไตล์เขียวอ่อนสบายตา
+// 🎨 จัดการสีแถวข้อมูล: รายรับสีเขียวอ่อนพาสเทล (#f0fdf4), รายจ่ายสีแดงอ่อนพาสเทล (#fef2f2)
 // ==========================================
-function ensureSheetBanding(sheet, dataEndRow) {
-  if (!sheet) return;
+function formatDataRowColors(sheet, dataEndRow) {
+  if (!sheet || dataEndRow < 2) return;
   try {
     var bandings = sheet.getBandings();
     for (var b = 0; b < bandings.length; b++) {
       bandings[b].remove();
     }
-    if (dataEndRow >= 2) {
-      var dataRange = sheet.getRange(1, 1, dataEndRow, 9);
-      var banding = dataRange.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREEN, true, false);
-      banding.setHeaderRowColor('#059669'); // สีเขียวมรกตเข้ม
-      banding.setFirstRowColor('#ffffff');  // แถวแรก: ขาว
-      banding.setSecondRowColor('#f0fdf4'); // แถวสอง: เขียวอ่อนละมุน
+
+    var numRows = dataEndRow - 1;
+    var range = sheet.getRange(2, 1, numRows, 9);
+    var firstColValues = sheet.getRange(2, 1, numRows, 1).getValues();
+
+    var backgrounds = [];
+    var fontColors = [];
+
+    for (var r = 0; r < numRows; r++) {
+      var idStr = String(firstColValues[r][0] || '').trim();
+      var isExpense = (idStr.indexOf('EXP-') === 0 || idStr.indexOf('รายจ่าย') !== -1);
+
+      var rowBg = isExpense ? '#fef2f2' : '#f0fdf4';
+      var rowColor = isExpense ? '#7f1d1d' : '#14532d';
+
+      var bgRow = [];
+      var colorRow = [];
+      for (var c = 0; c < 9; c++) {
+        bgRow.push(rowBg);
+        colorRow.push(rowColor);
+      }
+      backgrounds.push(bgRow);
+      fontColors.push(colorRow);
     }
-  } catch (e) {}
+
+    range.setBackgrounds(backgrounds);
+    range.setFontColors(fontColors);
+  } catch (e) {
+    Logger.log('Error in formatDataRowColors: ' + e);
+  }
+}
+
+function ensureSheetBanding(sheet, dataEndRow) {
+  formatDataRowColors(sheet, dataEndRow);
 }
 
 // ==========================================
@@ -202,18 +225,18 @@ function applyOrderSheetTemplateStyle(sheet) {
     'รายการสินค้า'
   ];
 
-  // 1. หัวตาราง (Header)
+  // 1. หัวตาราง (Header) - สี Slate Navy สบายตา ไม่สับสนกับแถวรายรับ
   var headerRange = sheet.getRange(1, 1, 1, headers.length);
-  headerRange.setBackground('#059669'); // สีเขียวมรกตเข้ม
+  headerRange.setBackground('#1e293b'); // สีกรมท่า Slate Navy
   headerRange.setFontColor('#ffffff');
   headerRange.setFontWeight('bold');
   headerRange.setHorizontalAlignment('center');
   headerRange.setVerticalAlignment('middle');
-  sheet.setRowHeight(1, 32);
+  sheet.setRowHeight(1, 34);
   sheet.setFrozenRows(1);
 
   // 2. ความกว้างคอลัมน์มาตรฐาน
-  var colWidths = [210, 160, 110, 110, 105, 105, 105, 95, 340];
+  var colWidths = [210, 160, 130, 110, 105, 105, 105, 95, 340];
   for (var c = 0; c < colWidths.length; c++) {
     sheet.setColumnWidth(c + 1, colWidths[c]);
   }
@@ -236,10 +259,7 @@ function applyOrderSheetTemplateStyle(sheet) {
 
     if (dataEndRow >= 2) {
       var numRows = dataEndRow - 1;
-      // ล้างสีตกค้างและรีเซ็ตสไตล์ในแถวข้อมูล
       var allDataRange = sheet.getRange(2, 1, numRows, headers.length);
-      allDataRange.setBackground(null);
-      allDataRange.setFontColor('#1f2937');
       allDataRange.setFontWeight('normal');
       allDataRange.setBorder(false, false, false, false, false, false);
       allDataRange.setVerticalAlignment('middle');
@@ -251,8 +271,8 @@ function applyOrderSheetTemplateStyle(sheet) {
       sheet.getRange(2, 4, numRows, 5).setHorizontalAlignment('right').setNumberFormat('#,##0');
       sheet.getRange(2, 9, numRows, 1).setHorizontalAlignment('left');
 
-      // ใส่แถบสลับสี (Alternating Row Banding)
-      ensureSheetBanding(sheet, dataEndRow);
+      // ใส่สีแถวข้อมูล (เขียวอ่อนสำหรับรายรับ, แดงอ่อนสำหรับรายจ่าย)
+      formatDataRowColors(sheet, dataEndRow);
     }
   }
 
@@ -296,17 +316,17 @@ function updateOrderSheetTotals(sheet) {
 
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
-    sheet.getRange(2, 1, 1, 9).setValues([['ยอดรวมทั้งหมด', '', '(0 บิล)', 0, 0, 0, 0, 0, '-']]);
+    sheet.getRange(2, 1, 1, 9).setValues([['ยอดรวมทั้งหมด', '', '(0 รายการ)', 0, 0, 0, 0, 0, '-']]);
     var zeroRange = sheet.getRange(2, 1, 1, 9);
-    zeroRange.setBackground('#dcfce7')
+    zeroRange.setBackground('#f1f5f9')
       .setFontWeight('bold')
-      .setFontColor('#166534')
+      .setFontColor('#0f172a')
       .setHorizontalAlignment('right');
     sheet.getRange(2, 1).setHorizontalAlignment('left');
     sheet.getRange(2, 3).setHorizontalAlignment('center');
     sheet.getRange(2, 4, 1, 5).setNumberFormat('#,##0');
-    zeroRange.setBorder(true, null, true, null, null, null, '#16a34a', SpreadsheetApp.BorderStyle.DOUBLE);
-    ensureSheetBanding(sheet, 1);
+    zeroRange.setBorder(true, null, true, null, null, null, '#334155', SpreadsheetApp.BorderStyle.DOUBLE);
+    formatDataRowColors(sheet, 1);
     return;
   }
 
@@ -318,21 +338,21 @@ function updateOrderSheetTotals(sheet) {
   }
 
   if (orderLastRow < 2) {
-    ensureSheetBanding(sheet, 1);
+    formatDataRowColors(sheet, 1);
     return;
   }
 
   var totalRowIndex = orderLastRow + 1;
-  var formulaTotal = '=SUM(D2:D' + orderLastRow + ')';
+  var formulaTotal = '=SUM(D2:D' + orderLastRow + ')'; // คำนวณเงินสุทธิ: รายรับรวม - รายจ่ายรวม
   var formulaCost = '=SUM(E2:E' + orderLastRow + ')';
-  var formulaProfit = '=SUM(F2:F' + orderLastRow + ')';
+  var formulaProfit = '=SUM(F2:F' + orderLastRow + ')'; // กำไรสุทธิ: กำไรขาย - รายจ่าย
   var formulaCash = '=SUM(G2:G' + orderLastRow + ')';
   var formulaChange = '=SUM(H2:H' + orderLastRow + ')';
 
   var totalValues = [
     'ยอดรวมทั้งหมด',
     '',
-    '(' + (orderLastRow - 1) + ' บิล)',
+    '(' + (orderLastRow - 1) + ' รายการ)',
     formulaTotal,
     formulaCost,
     formulaProfit,
@@ -341,21 +361,21 @@ function updateOrderSheetTotals(sheet) {
     '-'
   ];
 
-  // ⚡ Batch write: เขียนแถวสรุปรวมทั้งแถวในคำสั่งเดียว
+  // ⚡ Batch write: เขียนแถวสรุปรวมทั้งแถวในคำสั่งเดียว สไตล์ Light Slate (#f1f5f9) ขอบ #334155
   sheet.getRange(totalRowIndex, 1, 1, 9).setValues([totalValues]);
 
   var totalRange = sheet.getRange(totalRowIndex, 1, 1, 9);
-  totalRange.setBackground('#dcfce7')
+  totalRange.setBackground('#f1f5f9')
     .setFontWeight('bold')
-    .setFontColor('#166534')
+    .setFontColor('#0f172a')
     .setHorizontalAlignment('right');
   sheet.getRange(totalRowIndex, 1).setHorizontalAlignment('left');
   sheet.getRange(totalRowIndex, 3).setHorizontalAlignment('center');
   sheet.getRange(totalRowIndex, 4, 1, 5).setNumberFormat('#,##0');
-  totalRange.setBorder(true, null, true, null, null, null, '#16a34a', SpreadsheetApp.BorderStyle.DOUBLE);
+  totalRange.setBorder(true, null, true, null, null, null, '#334155', SpreadsheetApp.BorderStyle.DOUBLE);
 
-  // อัปเดตแถบสีสลับแถว (Row Banding) ให้ครอบคลุมแถวข้อมูล (แถว 1 ถึง orderLastRow)
-  ensureSheetBanding(sheet, orderLastRow);
+  // อัปเดตสีแถวข้อมูล (เขียวอ่อนสำหรับรายรับ, แดงอ่อนสำหรับรายจ่าย)
+  formatDataRowColors(sheet, orderLastRow);
 }
 
 // บันทึกออเดอร์ลงชีตที่ระบุ พร้อมจัดรูปแบบและอัปเดตยอดรวม (High-Performance In-Place Overwrite)
@@ -403,10 +423,10 @@ function appendOrderToSheet(sheet, order) {
     sanitizeForSheet(itemsSummary)
   ];
 
-  // ⚡ Batch write ออเดอร์ในแถวเดียว พร้อมเคลียร์สีพื้นหลังและเส้นขอบเดิมออก (ป้องกันสีเขียวของแถวสรุปติดค้าง)
+  // ⚡ Batch write ออเดอร์ในแถวเดียว จัดสีเขียวอ่อนพาสเทล (#f0fdf4)
   var orderRowRange = sheet.getRange(targetRow, 1, 1, 9);
-  orderRowRange.setBackground(null);
-  orderRowRange.setFontColor('#1f2937');
+  orderRowRange.setBackground('#f0fdf4');
+  orderRowRange.setFontColor('#14532d');
   orderRowRange.setFontWeight('normal');
   orderRowRange.setBorder(false, false, false, false, false, false);
   orderRowRange.setValues([orderRowValues]);
@@ -417,6 +437,73 @@ function appendOrderToSheet(sheet, order) {
   sheet.getRange(targetRow, 9).setHorizontalAlignment('left');
 
   // คำนวณและใส่แถวสรุปรวมท้ายตารางใหม่
+  updateOrderSheetTotals(sheet);
+}
+
+// บันทึกรายจ่ายลงชีตออเดอร์ร่วม พร้อมจัดรูปแบบสีแดงอ่อน และอัปเดตยอดรวมสุทธิ
+function appendExpenseToSheet(sheet, exp) {
+  if (!sheet || !exp) return;
+
+  var expNo = String(exp.expenseNo || '').trim();
+  if (!expNo) {
+    var d = new Date(exp.createdAt || Date.now());
+    var dtPrefix = Utilities.formatDate(d, "Asia/Bangkok", "yyyyMMdd-HHmmss");
+    var randPart = Math.floor(1000 + Math.random() * 9000);
+    expNo = 'EXP-' + dtPrefix + '-' + randPart;
+    exp.expenseNo = expNo;
+  }
+
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var rowFirstCol = String(data[i][0] || '').trim();
+    if (rowFirstCol === expNo) {
+      return; // มีแล้ว ข้าม
+    }
+  }
+
+  var lastRow = sheet.getLastRow();
+  var targetRow = lastRow + 1;
+  if (lastRow > 1) {
+    var lastRowVal = String(sheet.getRange(lastRow, 1).getValue());
+    if (lastRowVal.indexOf('ยอดรวมทั้งหมด') !== -1) {
+      targetRow = lastRow;
+    }
+  }
+
+  var dateTimeStr = "'" + getDateTimeString(exp.createdAt || Date.now());
+  var categoryStr = 'รายจ่าย: ' + (exp.category || 'อื่นๆ');
+  var amount = Math.abs(Number(exp.amount) || 0);
+  var negAmount = -amount; // ติดลบเพื่อให้สูตร SUM หักลบจากรายรับเป็นยอดสุทธิ (Net Balance) ทันที
+
+  var details = exp.title || 'รายจ่าย';
+  if (exp.note) {
+    details += ' (หมายเหตุ: ' + exp.note + ')';
+  }
+
+  var expenseRowValues = [
+    sanitizeForSheet(expNo),
+    dateTimeStr,
+    sanitizeForSheet(categoryStr),
+    negAmount, // Col 4: ยอดเงินรวม (ติดลบ)
+    0,          // Col 5: ต้นทุนรวม (0)
+    negAmount, // Col 6: กำไร (ติดลบ หักลบกำไรสุทธิ)
+    0,          // Col 7: รับเงิน (0)
+    0,          // Col 8: ทอนเงิน (0)
+    sanitizeForSheet(details) // Col 9: รายละเอียดรายจ่าย
+  ];
+
+  var expRowRange = sheet.getRange(targetRow, 1, 1, 9);
+  expRowRange.setBackground('#fef2f2');
+  expRowRange.setFontColor('#7f1d1d');
+  expRowRange.setFontWeight('normal');
+  expRowRange.setBorder(false, false, false, false, false, false);
+  expRowRange.setValues([expenseRowValues]);
+  sheet.getRange(targetRow, 1).setHorizontalAlignment('left');
+  sheet.getRange(targetRow, 2).setHorizontalAlignment('center');
+  sheet.getRange(targetRow, 3).setHorizontalAlignment('center');
+  sheet.getRange(targetRow, 4, 1, 5).setHorizontalAlignment('right').setNumberFormat('#,##0');
+  sheet.getRange(targetRow, 9).setHorizontalAlignment('left');
+
   updateOrderSheetTotals(sheet);
 }
 
@@ -483,8 +570,9 @@ function doGet(e) {
       }
     }
 
-    // 3. ดึงประวัติบิลขาย (อ่านจากชีต "รวมออเดอร์ทั้งหมด")
+    // 3. ดึงประวัติบิลขายและรายจ่าย (อ่านจากชีต "รวมออเดอร์ทั้งหมด")
     var orders = [];
+    var sheetExpenses = [];
     var allOrdersSheet = ss.getSheetByName('รวมออเดอร์ทั้งหมด');
     if (allOrdersSheet) {
       var allData = allOrdersSheet.getDataRange().getValues();
@@ -493,6 +581,50 @@ function doGet(e) {
         var orderNoStr = String(arow[0] || '').trim();
         // ข้ามแถวรวมยอดและแถวว่าง
         if (orderNoStr && orderNoStr.indexOf('ยอดรวมทั้งหมด') === -1) {
+          // หากเป็นแถวรายจ่าย (EXP-...) ให้แยกไปเข้า sheetExpenses
+          if (orderNoStr.indexOf('EXP-') === 0) {
+            var expCellDate = arow[1];
+            var expIsoDate = normalizeIsoDate(expCellDate);
+            var expAmt = Math.abs(Number(arow[3]) || 0);
+            var expCategoryRaw = String(arow[2] || '').replace(/^รายจ่าย:s*/, '').trim() || 'อื่นๆ';
+            var rawExpDetails = String(arow[8] || '').trim();
+            var expTitle = rawExpDetails;
+            var expNote = '';
+            var noteMatch = rawExpDetails.match(/^(.*?)(?:\s*\(หมายเหตุ:\s*(.*?)\))?$/);
+            if (noteMatch) {
+              expTitle = noteMatch[1].trim();
+              expNote = noteMatch[2] ? noteMatch[2].trim() : '';
+            }
+
+            var expCreatedAt = Date.now();
+            var expMatch = orderNoStr.match(/^EXP-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/);
+            if (expMatch) {
+              var dtFromExp = new Date(
+                parseInt(expMatch[1], 10),
+                parseInt(expMatch[2], 10) - 1,
+                parseInt(expMatch[3], 10),
+                parseInt(expMatch[4], 10),
+                parseInt(expMatch[5], 10),
+                parseInt(expMatch[6], 10)
+              );
+              if (!isNaN(dtFromExp.getTime())) {
+                expCreatedAt = dtFromExp.getTime();
+              }
+            } else if (expCellDate instanceof Date && !isNaN(expCellDate.getTime())) {
+              expCreatedAt = expCellDate.getTime();
+            }
+
+            sheetExpenses.push({
+              expenseNo: orderNoStr,
+              title: expTitle,
+              amount: expAmt,
+              category: expCategoryRaw,
+              note: expNote,
+              dateStr: expIsoDate,
+              createdAt: expCreatedAt
+            });
+            continue; // ข้าม ไม่นำไปใส่ใน orders
+          }
           var cellDate = arow[1];
           var isoDate = normalizeIsoDate(cellDate);
 
@@ -638,21 +770,39 @@ function doGet(e) {
     }
   }
 
-  // 4. ดึงข้อมูลรายจ่ายจาก _ระบบ_รายจ่าย
+  // 4. ผสานข้อมูลรายจ่ายจากชีตรวมและ _ระบบ_รายจ่าย (Deduplicated Multi-Device Safe)
+  var expenseMap = {};
   var expenses = [];
+
+  // ใส่ expenses จากชีต "รวมออเดอร์ทั้งหมด" ก่อน
+  sheetExpenses.forEach(function(se) {
+    var key = se.expenseNo || (se.title + '_' + se.dateStr + '_' + se.amount);
+    if (!expenseMap[key]) {
+      expenseMap[key] = true;
+      expenses.push(se);
+    }
+  });
+
+  // ผสานกับข้อมูลจาก _ระบบ_รายจ่าย (สำหรับข้อมูลเดิมที่เคยบันทึกไว้)
   var expData = expSheet.getDataRange().getValues();
   for (var j = 1; j < expData.length; j++) {
     var erow = expData[j];
     if (erow[0]) {
       var expDateStr = normalizeIsoDate(erow[4]);
-      expenses.push({
-        title: String(erow[0]),
-        amount: Number(erow[1]) || 0,
-        category: String(erow[2] || 'อื่นๆ'),
-        note: String(erow[3] || ''),
-        dateStr: expDateStr,
-        createdAt: Number(erow[5]) || Date.now()
-      });
+      var expLegacyNo = erow[6] ? String(erow[6]).trim() : '';
+      var legacyKey = expLegacyNo || (String(erow[0]) + '_' + expDateStr + '_' + Number(erow[1]));
+      if (!expenseMap[legacyKey]) {
+        expenseMap[legacyKey] = true;
+        expenses.push({
+          expenseNo: expLegacyNo || undefined,
+          title: String(erow[0]),
+          amount: Number(erow[1]) || 0,
+          category: String(erow[2] || 'อื่นๆ'),
+          note: String(erow[3] || ''),
+          dateStr: expDateStr,
+          createdAt: Number(erow[5]) || Date.now()
+        });
+      }
     }
   }
 
@@ -723,13 +873,13 @@ function doPost(e) {
         })).setMimeType(ContentService.MimeType.JSON);
       }
 
-      var totalAmt = Number(order.totalAmount);
-      if (isNaN(totalAmt) || totalAmt < 0) {
+      if (order.totalAmount === null || order.totalAmount === undefined || isNaN(Number(order.totalAmount)) || Number(order.totalAmount) < 0) {
         return ContentService.createTextOutput(JSON.stringify({
           status: 'error',
-          message: 'ยอดรวมออเดอร์ต้องไม่ติดลบ'
+          message: 'ยอดรวมออเดอร์ต้องระบุและไม่ติดลบ'
         })).setMimeType(ContentService.MimeType.JSON);
       }
+      var totalAmt = Number(order.totalAmount);
 
       for (var v = 0; v < orderItems.length; v++) {
         var vItem = orderItems[v];
@@ -933,58 +1083,141 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 6. บันทึกรายจ่ายร้าน (saveExpense)
+    // 6. บันทึกรายจ่ายร้าน (saveExpense) - บันทึกลงทั้ง 3 ชีตออเดอร์หลักและชีตสำรอง
     if (action === 'saveExpense') {
       var exp = postData.expense;
-      if (exp) {
-        var expSheet = getOrCreateExpenseSheet(ss);
-        var normExpDate = normalizeIsoDate(exp.dateStr) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
-        expSheet.appendRow([
-          sanitizeForSheet(exp.title),
-          Math.max(0, Number(exp.amount) || 0),
-          sanitizeForSheet(exp.category || 'อื่นๆ'),
-          sanitizeForSheet(exp.note || ''),
-          "'" + normExpDate,
-          Number(exp.createdAt) || Date.now()
-        ]);
+      if (!exp) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'ไม่มีข้อมูลรายจ่าย' }))
+          .setMimeType(ContentService.MimeType.JSON);
       }
-      return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
-        .setMimeType(ContentService.MimeType.JSON);
+
+      // 🛡️ ตรวจสอบว่าวันที่บันทึกเป็นวันปัจจุบัน (Asia/Bangkok) เท่านั้น!
+      var todayBangkok = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+      var expDate = normalizeIsoDate(exp.dateStr) || todayBangkok;
+      if (expDate !== todayBangkok) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'สามารถเพิ่มรายจ่ายได้เฉพาะของวันปัจจุบันเท่านั้น (วันปัจจุบัน: ' + todayBangkok + ', วันที่ส่งมา: ' + expDate + ')'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // สร้าง expenseNo หากไม่มี
+      if (!exp.expenseNo) {
+        var expDateObj = new Date(exp.createdAt || Date.now());
+        var dtPrefixExp = Utilities.formatDate(expDateObj, "Asia/Bangkok", "yyyyMMdd-HHmmss");
+        var randPartExp = Math.floor(1000 + Math.random() * 9000);
+        exp.expenseNo = 'EXP-' + dtPrefixExp + '-' + randPartExp;
+      }
+
+      // 1. บันทึกลง 3 ชีตหลัก (ชีตประจำวัน, ชีตประจำเดือน, รวมออเดอร์ทั้งหมด)
+      var dailySheet = getOrCreateDailySheet(ss, getDaySheetName(exp.createdAt));
+      appendExpenseToSheet(dailySheet, exp);
+
+      var monthlySheet = getOrCreateMonthlySheet(ss, getMonthSheetName(exp.createdAt));
+      appendExpenseToSheet(monthlySheet, exp);
+
+      var allOrdersSheet = getOrCreateAllOrdersSheet(ss);
+      appendExpenseToSheet(allOrdersSheet, exp);
+
+      // 2. บันทึกสำรองลง _ระบบ_รายจ่าย เพื่อ backward compatibility
+      var expSheet = getOrCreateExpenseSheet(ss);
+      expSheet.appendRow([
+        sanitizeForSheet(exp.title),
+        Math.max(0, Number(exp.amount) || 0),
+        sanitizeForSheet(exp.category || 'อื่นๆ'),
+        sanitizeForSheet(exp.note || ''),
+        "'" + todayBangkok,
+        Number(exp.createdAt) || Date.now(),
+        sanitizeForSheet(exp.expenseNo)
+      ]);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        expenseNo: exp.expenseNo
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 6.1 ลบรายจ่าย (deleteExpense)
+    // 6.1 ลบรายจ่าย (deleteExpense) - ลบออกจากชีตออเดอร์ร่วมและชีตสำรองทั้งหมด
     if (action === 'deleteExpense') {
       var expToDelete = postData.expense || {};
+      var targetExpNo = String(expToDelete.expenseNo || '').trim();
       var targetTitle = String(expToDelete.title || '').trim();
       var targetCreatedAt = Number(expToDelete.createdAt) || 0;
       var targetDateStr = normalizeIsoDate(expToDelete.dateStr);
 
+      var deletedAny = false;
+
+      // ฟังก์ชันลบแถวรายจ่ายออกจากชีต
+      function removeExpenseRow(sh) {
+        if (!sh) return false;
+        var shData = sh.getDataRange().getValues();
+        var wasDeleted = false;
+        for (var r = shData.length - 1; r >= 1; r--) {
+          var rowFirstCol = String(shData[r][0] || '').trim();
+          var rowDetails = String(shData[r][8] || '').trim();
+          var rowDate = normalizeIsoDate(shData[r][1]);
+
+          var match = false;
+          if (targetExpNo && rowFirstCol === targetExpNo) {
+            match = true;
+          } else if (targetExpNo && rowFirstCol.indexOf('EXP-') === 0 && rowDetails.indexOf(targetTitle) !== -1) {
+            match = true;
+          } else if (!targetExpNo && rowFirstCol.indexOf('EXP-') === 0 && rowDetails.indexOf(targetTitle) !== -1 && (!targetDateStr || rowDate === targetDateStr)) {
+            match = true;
+          }
+
+          if (match) {
+            sh.deleteRow(r + 1);
+            wasDeleted = true;
+          }
+        }
+        if (wasDeleted) {
+          updateOrderSheetTotals(sh);
+        }
+        return wasDeleted;
+      }
+
+      // 1. ลบจากชีต _ระบบ_รายจ่าย
       var expSheet = getOrCreateExpenseSheet(ss);
       var expData = expSheet.getDataRange().getValues();
-      var deleted = false;
-
       for (var ex = expData.length - 1; ex >= 1; ex--) {
-        var rowTitle = String(expData[ex][0] || '').trim();
-        var rowDate = normalizeIsoDate(expData[ex][4]);
-        var rowCreatedAt = Number(expData[ex][5]) || 0;
+        var rowTitleLegacy = String(expData[ex][0] || '').trim();
+        var rowDateLegacy = normalizeIsoDate(expData[ex][4]);
+        var rowCreatedAtLegacy = Number(expData[ex][5]) || 0;
+        var rowExpNoLegacy = String(expData[ex][6] || '').trim();
 
-        var isMatch = false;
-        if (targetCreatedAt > 0 && rowCreatedAt > 0) {
-          isMatch = (rowTitle === targetTitle && Math.abs(rowCreatedAt - targetCreatedAt) < 2000);
-        } else if (targetDateStr && rowDate) {
-          isMatch = (rowTitle === targetTitle && rowDate === targetDateStr);
+        var isMatchLegacy = false;
+        if (targetExpNo && rowExpNoLegacy === targetExpNo) {
+          isMatchLegacy = true;
+        } else if (targetCreatedAt > 0 && rowCreatedAtLegacy > 0) {
+          isMatchLegacy = (rowTitleLegacy === targetTitle && Math.abs(rowCreatedAtLegacy - targetCreatedAt) < 2000);
+        } else if (targetDateStr && rowDateLegacy) {
+          isMatchLegacy = (rowTitleLegacy === targetTitle && rowDateLegacy === targetDateStr);
         } else {
-          isMatch = (rowTitle === targetTitle);
+          isMatchLegacy = (rowTitleLegacy === targetTitle);
         }
 
-        if (isMatch) {
+        if (isMatchLegacy) {
           expSheet.deleteRow(ex + 1);
-          deleted = true;
+          deletedAny = true;
           break;
         }
       }
 
-      return ContentService.createTextOutput(JSON.stringify({ status: 'success', deleted: deleted }))
+      // 2. ลบออกจากชีตรวมออเดอร์ทั้งหมด
+      var allShExp = ss.getSheetByName('รวมออเดอร์ทั้งหมด');
+      if (removeExpenseRow(allShExp)) deletedAny = true;
+
+      // 3. ลบออกจากชีตประจำวันและประจำเดือน
+      var allSheetsExp = ss.getSheets();
+      for (var sx = 0; sx < allSheetsExp.length; sx++) {
+        var sNameX = allSheetsExp[sx].getName();
+        if (sNameX !== '_ระบบ_สินค้า' && sNameX !== '_ระบบ_รายจ่าย' && sNameX !== 'รวมออเดอร์ทั้งหมด') {
+          if (removeExpenseRow(allSheetsExp[sx])) deletedAny = true;
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', deleted: deletedAny }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -1056,11 +1289,15 @@ function doPost(e) {
         var daySheetName = dateParts.length === 3 ? (dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0]) : getDaySheetName(Date.now());
         var monthSheetName = dateParts.length === 3 ? ('เดือน-' + dateParts[1] + '-' + dateParts[0]) : getMonthSheetName(Date.now());
         var ordTargetPrefix = targetDateStr ? ('ORD-' + targetDateStr.replace(/-/g, '')) : '';
+        var expTargetPrefix = targetDateStr ? ('EXP-' + targetDateStr.replace(/-/g, '')) : '';
 
         function isDateMatch(row) {
           if (!row) return false;
           var rowOrdNo = String(row[0] || '').trim();
           if (ordTargetPrefix && rowOrdNo.indexOf(ordTargetPrefix) === 0) {
+            return true;
+          }
+          if (expTargetPrefix && rowOrdNo.indexOf(expTargetPrefix) === 0) {
             return true;
           }
           var rowDateIso = normalizeIsoDate(row[1]);
@@ -1099,11 +1336,15 @@ function doPost(e) {
         var monthSuffix = mParts.length === 2 ? ('-' + mParts[1] + '-' + mParts[0]) : '';
         var monthSheetName = mParts.length === 2 ? ('เดือน-' + mParts[1] + '-' + mParts[0]) : getMonthSheetName(Date.now());
         var ordMonthPrefix = targetMonthStr ? ('ORD-' + targetMonthStr.replace(/-/g, '')) : '';
+        var expMonthPrefix = targetMonthStr ? ('EXP-' + targetMonthStr.replace(/-/g, '')) : '';
 
         function isMonthMatch(row) {
           if (!row) return false;
           var rowOrdNo = String(row[0] || '').trim();
           if (ordMonthPrefix && rowOrdNo.indexOf(ordMonthPrefix) === 0) {
+            return true;
+          }
+          if (expMonthPrefix && rowOrdNo.indexOf(expMonthPrefix) === 0) {
             return true;
           }
           var rowDateIso = normalizeIsoDate(row[1]);
@@ -1184,6 +1425,49 @@ function doPost(e) {
       if (!targetOrderNo) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Missing orderNo' }))
           .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // 🛡️ หากส่งเป็นเลขที่รายจ่าย EXP- มา ให้เปลี่ยนทางไปลบแบบรายจ่ายทันที (ไม่ตัดสต็อก/ไม่คืนสต็อก)
+      if (targetOrderNo.indexOf('EXP-') === 0) {
+        function removeExpById(sh) {
+          if (!sh) return false;
+          var sData = sh.getDataRange().getValues();
+          var del = false;
+          for (var r = sData.length - 1; r >= 1; r--) {
+            if (String(sData[r][0] || '').trim() === targetOrderNo) {
+              sh.deleteRow(r + 1);
+              del = true;
+            }
+          }
+          if (del) updateOrderSheetTotals(sh);
+          return del;
+        }
+
+        var allShE = ss.getSheetByName('รวมออเดอร์ทั้งหมด');
+        removeExpById(allShE);
+
+        var allSheetsE = ss.getSheets();
+        for (var se = 0; se < allSheetsE.length; se++) {
+          var snE = allSheetsE[se].getName();
+          if (snE !== '_ระบบ_สินค้า' && snE !== '_ระบบ_รายจ่าย' && snE !== 'รวมออเดอร์ทั้งหมด') {
+            removeExpById(allSheetsE[se]);
+          }
+        }
+
+        var expShE = getOrCreateExpenseSheet(ss);
+        var expDataE = expShE.getDataRange().getValues();
+        for (var exe = expDataE.length - 1; exe >= 1; exe--) {
+          if (String(expDataE[exe][6] || '').trim() === targetOrderNo) {
+            expShE.deleteRow(exe + 1);
+            break;
+          }
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'success',
+          deletedOrderNo: targetOrderNo,
+          restocked: false
+        })).setMimeType(ContentService.MimeType.JSON);
       }
 
       // 1. คืนสต็อกสินค้ากลับเข้า _ระบบ_สินค้า ทันที

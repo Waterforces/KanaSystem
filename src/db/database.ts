@@ -22,6 +22,11 @@ export class PosDatabase extends Dexie {
       orders: '++id, orderNo, dateStr, monthStr, createdAt',
       expenses: '++id, dateStr, monthStr, category, createdAt',
     })
+
+    // Version 2: เพิ่ม Index สำหรับ expenseNo และ title เพื่อรองรับการค้นหาและซิงก์รายจ่าย
+    this.version(2).stores({
+      expenses: '++id, expenseNo, title, dateStr, monthStr, category, createdAt',
+    })
   }
 
   /**

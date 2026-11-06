@@ -141,7 +141,12 @@ export const FinancePage: React.FC = () => {
     const dateStr = getLocalIsoDate(now)
     const monthStr = dateStr.slice(0, 7)
 
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
+    const rand = Math.floor(1000 + Math.random() * 9000)
+    const expenseNo = `EXP-${dateStr.replace(/-/g, '')}-${timeStr}-${rand}`
+
     const newExpense: Expense = {
+      expenseNo,
       title: expenseTitle.trim(),
       amount: amountNum,
       category: expenseCategory,
@@ -710,7 +715,10 @@ export const FinancePage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl safe-bottom">
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100">
-              <h2 className="font-bold text-slate-900 text-base">บันทึกรายจ่ายร้าน</h2>
+              <div>
+                <h2 className="font-bold text-slate-900 text-base">บันทึกรายจ่ายร้าน</h2>
+                <p className="text-[11px] text-emerald-600 font-medium mt-0.5">📅 ประจำวันที่: {todayStr} (เพิ่มได้เฉพาะของวันนี้)</p>
+              </div>
               <button
                 onClick={() => setIsAddExpenseOpen(false)}
                 className="p-1 rounded-full bg-slate-100 text-slate-600"

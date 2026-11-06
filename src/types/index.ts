@@ -60,6 +60,7 @@ export interface SaleOrder {
 // รายจ่ายของร้าน (Expense)
 export interface Expense {
   id?: number
+  expenseNo?: string       // รหัสรายจ่าย เช่น EXP-20261106-150000-xxxx
   title: string            // รายการค่าใช้จ่าย เช่น ซื้อน้ำแข็ง, จ่ายค่าไฟ
   amount: number           // จำนวนเงิน (บาท)
   category: string         // หมวดหมู่ค่าใช้จ่าย
