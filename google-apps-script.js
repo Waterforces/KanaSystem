@@ -291,10 +291,13 @@ function migrateLegacyExpensesToOrderSheets(ss) {
   var allOrdersSheet = getOrCreateAllOrdersSheet(ss);
   var allData = allOrdersSheet.getDataRange().getValues();
   var existingExpNos = {};
+  var existingTitles = {};
   for (var r = 1; r < allData.length; r++) {
     var col1 = String(allData[r][0] || '').trim();
     if (col1.indexOf('EXP-') === 0) {
       existingExpNos[col1] = true;
+      var detailCol = String(allData[r][8] || '').trim();
+      existingTitles[detailCol] = true;
     }
   }
 
@@ -318,7 +321,8 @@ function migrateLegacyExpensesToOrderSheets(ss) {
       expSheet.getRange(i + 1, 7).setValue(expNo);
     }
 
-    if (!existingExpNos[expNo]) {
+    var fullDetail = title + (note ? ' (หมายเหตุ: ' + note + ')' : '');
+    if (!existingExpNos[expNo] && !existingTitles[fullDetail] && !existingTitles[title]) {
       var expObj = {
         expenseNo: expNo,
         title: title,
@@ -337,8 +341,22 @@ function migrateLegacyExpensesToOrderSheets(ss) {
 
       appendExpenseToSheet(allOrdersSheet, expObj);
       existingExpNos[expNo] = true;
+      existingTitles[fullDetail] = true;
     }
   }
+}
+
+/**
+ * 🚀 กดปุ่มนี้เพียงครั้งเดียวใน Apps Script (เลือกฟังก์ชันนี้แล้วกด 'เรียกใช้') เพื่อ:
+ * 1. ดึงรายจ่ายเดิมทั้งหมดมาใส่ต่อท้ายออเดอร์ในชีตประจำวัน, เดือน, และรวมทั้งหมด (แถบสีแดง)
+ * 2. จัดระเบียบสีหัวตารางเป็นสีกรมท่า (#1e293b) และแถวสรุปเป็นสีเทา (#f1f5f9)
+ * 3. คำนวณยอดเงินสุทธิ (Net Balance) ให้อัตโนมัติทุกชีต
+ */
+function RUN_MIGRATE_AND_FORMAT_ALL_SHEETS() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  migrateLegacyExpensesToOrderSheets(ss);
+  formatAllOrderSheetsToTemplate(ss);
+  Logger.log('✅ ปรับปรุงชีตและดึงรายจ่ายสำเร็จเรียบร้อยทั้งหมดแล้ว!');
 }
 
 // เปิด/ปิด การซ่อนชีต _ระบบ_รายจ่าย
