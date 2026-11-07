@@ -330,6 +330,9 @@ export async function syncAllDataFromGoogleSheet(): Promise<SyncAllResult> {
             if (le.id) await db.expenses.delete(le.id)
           } else {
             seenExpKeys.add(expKey)
+            if (!cloudExpenseKeys.has(expKey)) {
+              syncExpenseToGoogleSheet(le).catch(() => {})
+            }
           }
         }
 

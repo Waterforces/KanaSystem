@@ -281,10 +281,89 @@ function applyOrderSheetTemplateStyle(sheet) {
 }
 
 // ==========================================
+// 🔄 ดึงรายจ่ายเดิมจาก _ระบบ_รายจ่าย มารวมในชีตออเดอร์ (Daily, Monthly, All Orders)
+// ==========================================
+function migrateLegacyExpensesToOrderSheets(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var expSheet = ss.getSheetByName('_ระบบ_รายจ่าย');
+  if (!expSheet) return;
+
+  var allOrdersSheet = getOrCreateAllOrdersSheet(ss);
+  var allData = allOrdersSheet.getDataRange().getValues();
+  var existingExpNos = {};
+  for (var r = 1; r < allData.length; r++) {
+    var col1 = String(allData[r][0] || '').trim();
+    if (col1.indexOf('EXP-') === 0) {
+      existingExpNos[col1] = true;
+    }
+  }
+
+  var expData = expSheet.getDataRange().getValues();
+  for (var i = 1; i < expData.length; i++) {
+    var erow = expData[i];
+    var title = String(erow[0] || '').trim();
+    if (!title) continue;
+
+    var amt = Number(erow[1]) || 0;
+    var cat = String(erow[2] || 'อื่นๆ');
+    var note = String(erow[3] || '');
+    var dateStr = normalizeIsoDate(erow[4]);
+    var createdAt = Number(erow[5]) || Date.now();
+    var expNo = erow[6] ? String(erow[6]).trim() : '';
+
+    if (!expNo) {
+      var d = new Date(createdAt);
+      var dtPrefix = Utilities.formatDate(d, "Asia/Bangkok", "yyyyMMdd-HHmmss");
+      expNo = 'EXP-' + dtPrefix + '-' + Math.floor(1000 + Math.random() * 9000);
+      expSheet.getRange(i + 1, 7).setValue(expNo);
+    }
+
+    if (!existingExpNos[expNo]) {
+      var expObj = {
+        expenseNo: expNo,
+        title: title,
+        amount: amt,
+        category: cat,
+        note: note,
+        dateStr: dateStr,
+        createdAt: createdAt
+      };
+
+      var dailySh = getOrCreateDailySheet(ss, getDaySheetName(createdAt));
+      appendExpenseToSheet(dailySh, expObj);
+
+      var monthlySh = getOrCreateMonthlySheet(ss, getMonthSheetName(createdAt));
+      appendExpenseToSheet(monthlySh, expObj);
+
+      appendExpenseToSheet(allOrdersSheet, expObj);
+      existingExpNos[expNo] = true;
+    }
+  }
+}
+
+// เปิด/ปิด การซ่อนชีต _ระบบ_รายจ่าย
+function toggleExpenseSheetVisibility() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('_ระบบ_รายจ่าย');
+  if (sh) {
+    if (sh.isSheetHidden()) {
+      sh.showSheet();
+    } else {
+      sh.hideSheet();
+    }
+  }
+}
+
+// ==========================================
 // 🎨 ปรับแต่งทุกชีตออเดอร์ในไฟล์ให้ใช้ Template เดียวกันทั้งหมด
 // ==========================================
 function formatAllOrderSheetsToTemplate(ss) {
   if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  // ซิงก์รายจ่ายเดิมเข้าชีตรวมก่อนจัดระเบียบ
+  try {
+    migrateLegacyExpensesToOrderSheets(ss);
+  } catch (mErr) {}
+
   var sheets = ss.getSheets();
   var datePattern = /^\d{2}-\d{2}-\d{4}$/;
   var monthPattern = /^เดือน-\d{2}-\d{4}$/;
@@ -304,6 +383,8 @@ function onOpen() {
     var ui = SpreadsheetApp.getUi();
     ui.createMenu('⚙️ ระบบ KANA POS')
       .addItem('🎨 จัดระเบียบและปรับธีมสีทุกชีตให้เหมือนกัน', 'formatAllOrderSheetsToTemplate')
+      .addItem('🔄 ดึงรายจ่ายเดิมเข้าชีตรวมออเดอร์', 'migrateLegacyExpensesToOrderSheets')
+      .addItem('👁️ แสดง/ซ่อนชีต _ระบบ_รายจ่าย', 'toggleExpenseSheetVisibility')
       .addToUi();
   } catch (e) {}
 }
