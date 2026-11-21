@@ -1,0 +1,176 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light dark;
+
+  --surface-canvas: #f1f5f9;
+  --surface-card: #ffffff;
+  --text-main: #0f172a;
+  --scrollbar-track: #e2e8f0;
+  --scrollbar-thumb: #94a3b8;
+
+  @media (prefers-color-scheme: dark) {
+    --surface-canvas: #020617;
+    --surface-card: #0f172a;
+    --text-main: #f1f5f9;
+    --scrollbar-track: #0f172a;
+    --scrollbar-thumb: #475569;
+  }
+
+  @supports (color: light-dark(white, black)) {
+    --surface-canvas: light-dark(#f1f5f9, #020617);
+    --surface-card: light-dark(#ffffff, #0f172a);
+    --text-main: light-dark(#0f172a, #f1f5f9);
+    --scrollbar-track: light-dark(#e2e8f0, #0f172a);
+    --scrollbar-thumb: light-dark(#94a3b8, #475569);
+  }
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    color-scheme: dark;
+  }
+
+  &:has(> head > meta[name="color-scheme"][content="light"]) {
+    color-scheme: light;
+  }
+
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+html.dark {
+  color-scheme: dark;
+  --surface-canvas: #020617;
+  --surface-card: #0f172a;
+  --text-main: #f1f5f9;
+  --scrollbar-track: #0f172a;
+  --scrollbar-thumb: #475569;
+}
+
+html:not(.dark) {
+  --surface-canvas: #f1f5f9;
+  --surface-card: #ffffff;
+  --text-main: #0f172a;
+  --scrollbar-track: #e2e8f0;
+  --scrollbar-thumb: #94a3b8;
+}
+
+@layer utilities {
+  /* iPhone / iPad Safe Area Helpers (รองรับ Dynamic Island และ Home Bar ด้านล่าง) */
+  .safe-top {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+  }
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 14px);
+  }
+  .safe-margin-bottom {
+    margin-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+html,
+body {
+  height: 100%;
+  min-height: 100dvh;
+  width: 100%;
+  background-color: var(--surface-canvas);
+  color: var(--text-main);
+  overflow-wrap: break-word;
+  scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+:where(a, code) {
+  overflow-wrap: anywhere;
+}
+
+img,
+video {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+/* การแตะปุ่มบนมือถือและ iPad ให้ตอบสนองทันที */
+button,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Native Modal Dialog: scroll containment & backdrop (ฐาน reset อยู่ใน @layer base เพื่อให้ Tailwind utilities ชนะได้) */
+@layer base {
+  dialog {
+    margin: auto;
+    border: none;
+    background: transparent;
+    padding: 0;
+    max-width: 100%;
+    max-height: 100dvh;
+  }
+}
+
+dialog[open] {
+  display: flex;
+}
+
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  background: rgb(2 6 23 / 0.65);
+  backdrop-filter: blur(4px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-label,
+  #printable-label * {
+    visibility: visible;
+  }
+  #printable-label {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}

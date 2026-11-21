@@ -1,6 +1,6 @@
 /**
  * ========================================================
- * 🗄️ db/database.ts - จัดการฐานข้อมูล IndexedDB ใน iPhone
+ * 🗄️ db/database.ts - จัดการฐานข้อมูล IndexedDB ในอุปกรณ์
  * ========================================================
  * ทำงานได้รวดเร็ว เก็บข้อมูลถาวรในเครื่อง แม้ปิดแอปหรือไม่มีเน็ต
  */
@@ -16,7 +16,6 @@ export class PosDatabase extends Dexie {
   constructor() {
     super('KanaPosDB')
 
-    // กำหนด Index สำหรับการค้นหาข้อมูล
     this.version(1).stores({
       products: '++id, &barcode, name, category, stock',
       orders: '++id, orderNo, dateStr, monthStr, createdAt',
@@ -26,6 +25,12 @@ export class PosDatabase extends Dexie {
     // Version 2: เพิ่ม Index สำหรับ expenseNo และ title เพื่อรองรับการค้นหาและซิงก์รายจ่าย
     this.version(2).stores({
       expenses: '++id, expenseNo, title, dateStr, monthStr, category, createdAt',
+    })
+
+    // Version 3: เพิ่ม Index location สำหรับจัดกลุ่มข้อมูลตามทำเลร้านค้า
+    this.version(3).stores({
+      orders: '++id, orderNo, dateStr, monthStr, location, createdAt',
+      expenses: '++id, expenseNo, title, dateStr, monthStr, category, location, createdAt',
     })
   }
 
@@ -89,7 +94,6 @@ export class PosDatabase extends Dexie {
         },
       ]
       await this.products.bulkAdd(sampleProducts)
-      console.log('✅ เพิ่มสินค้าตัวอย่างในระบบเรียบร้อย')
     }
   }
 }

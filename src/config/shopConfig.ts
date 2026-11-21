@@ -40,7 +40,8 @@ export const SHOP_CONFIG = {
   // ⚡ ปุ่มลัดรับเงินด่วนในหน้าคิดเงิน (หน่วย: บาท)
   quickCashAmounts: [20, 50, 100, 500, 1000],
 
-  // 📊 ลิงก์เชื่อมต่อ Google Sheets API (สามารถตั้งค่าผ่านหน้า Settings ในแอปได้)
-  googleSheetUrl: '',
-  googleScriptUrl: 'https://script.google.com/macros/s/AKfycbyLcp3M94nd7ZjST9wlTClamJ6ztEm-oJmKt3vNrWyZ3fADfkss4Fvk79U-y-W83dCkuA/exec',
+  // 📊 ลิงก์และโทเคนเชื่อมต่อ Google Sheets API (อ่านจาก .env.local หรือตั้งค่าผ่านหน้าแอป)
+  googleSheetUrl: process.env.NEXT_PUBLIC_GOOGLE_SHEET_URL || '',
+  googleScriptUrl: process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_URL || '',
+  appSyncToken: process.env.NEXT_PUBLIC_APP_SYNC_TOKEN || '',
 }

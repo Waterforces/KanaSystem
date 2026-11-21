@@ -79,7 +79,7 @@
 
 ### 9. 🔵 BS-10: ตรวจสอบความปลอดภัย `appToken`
 - **ใน `google-apps-script.js` และ `src/utils/googleSheetSync.ts`:**
-  - กำหนดให้ตรวจสอบ `appToken === 'KANA_POS_SYNC_2026'` ใน `doPost` เมื่อมีการส่งพารามิเตอร์มา เพื่อป้องกันการเรียกใช้งานจากบอทหรือสคริปต์ภายนอก
+  - กำหนดให้ตรวจสอบ `appToken` เทียบกับ `APP_SYNC_TOKEN` (อ่านจาก Script Properties / `.env.local`) เพื่อป้องกันการเรียกใช้งานจากบอทหรือสคริปต์ภายนอก
 
 ---
 

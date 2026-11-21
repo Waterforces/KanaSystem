@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * ========================================================
  * 🏷️ utils/categoryHelper.ts - จัดการหมวดหมู่สินค้า
@@ -151,12 +153,13 @@ export function resetCategoriesToDefault(): void {
 import { useState, useEffect } from 'react'
 
 export function useProductCategories() {
-  const [categories, setCategories] = useState<string[]>(getStoredCategories)
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
 
   useEffect(() => {
     const handleUpdate = () => {
       setCategories(getStoredCategories())
     }
+    handleUpdate()
     window.addEventListener(EVENT_NAME, handleUpdate)
     window.addEventListener('storage', handleUpdate)
     return () => {

@@ -10,7 +10,27 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
 *.local
+.env*
+!.env.example
+.wrangler/
+
+# Legacy local snapshots & live-endpoint scripts (contain store data / private URLs)
+tests/baseline_snapshot.json
+HELL_MODE_STRESS_TEST_REPORT.md
+tests/chaos_client.mjs
+tests/dump_baseline.mjs
+tests/preflight.mjs
+tests/round*.mjs
+tests/sweep_chaos.mjs
+tests/test_full_unified_engine.mjs
+tests/test_phase1.mjs
+tests/unified_qa_harness.mjs
+tests/verify_post_test_state.mjs
 
 # Editor directories and files
 .vscode/*

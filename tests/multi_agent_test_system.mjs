@@ -5,8 +5,8 @@
  * ========================================================
  */
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLcp3M94nd7ZjST9wlTClamJ6ztEm-oJmKt3vNrWyZ3fADfkss4Fvk79U-y-W83dCkuA/exec';
-const APP_TOKEN = 'KANA_POS_SYNC_2026';
+const SCRIPT_URL = process.env.KANA_SCRIPT_URL || '';
+const APP_TOKEN = process.env.KANA_APP_TOKEN || '';
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));

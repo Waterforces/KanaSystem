@@ -4,6 +4,10 @@
  * ========================================================
  */
 
+export type NavTab = 'pos' | 'products' | 'data' | 'settings'
+
+export type ThemeMode = 'system' | 'light' | 'dark'
+
 // สินค้าในร้าน
 export interface Product {
   id?: number
@@ -52,6 +56,7 @@ export interface SaleOrder {
   paymentMethod: 'CASH' | 'PROMPTPAY' | 'THAI_CHUEY_THAI' // วิธีชำระเงิน
   customerPaid?: number    // ยอดที่ลูกค้าชำระจริง (กรณีไทยช่วยไทย คือ 40%)
   discountAmount?: number  // ส่วนลด/เงินช่วยเหลือ (กรณีไทยช่วยไทย คือ 60%)
+  location?: string        // ทำเล/สถานที่ตั้งร้านค้าเฉพาะเครื่องตอนขาย (ถ้ามี)
   createdAt: number        // เวลาที่บันทึก
   dateStr: string          // วันที่รูปแบบ YYYY-MM-DD สำหรับกรองข้อมูล
   monthStr: string         // เดือนรูปแบบ YYYY-MM สำหรับสรุปรายเดือน
@@ -65,6 +70,7 @@ export interface Expense {
   amount: number           // จำนวนเงิน (บาท)
   category: string         // หมวดหมู่ค่าใช้จ่าย
   note?: string            // หมายเหตุเพิ่มเติม
+  location?: string        // ทำเล/สถานที่ตั้งร้านค้าเฉพาะเครื่องตอนบันทึก (ถ้ามี)
   createdAt: number        // เวลาที่จ่าย
   dateStr: string          // วันที่ YYYY-MM-DD
   monthStr: string         // เดือน YYYY-MM
@@ -78,4 +84,56 @@ export interface FinancialSummary {
   totalExpenses: number    // รายจ่ายอื่นๆ ของร้าน
   netProfit: number        // กำไรสุทธิ (กำไรขั้นต้น - รายจ่าย)
   orderCount: number       // จำนวนบิลทั้งหมด
+}
+
+// กลุ่มสรุปข้อมูลรายวัน / รายเดือน (แยกตามทำเลเมื่อมีมากกว่า 1 ร้าน)
+export interface PeriodLocationSummary {
+  id: string
+  periodKey: string              // YYYY-MM-DD (รายวัน) หรือ YYYY-MM (รายเดือน)
+  location: string               // '' เมื่อไม่ได้กรอกทำเล หรือชื่อทำเลที่ตัดช่องว่างแล้ว
+  locationLabel: string          // ชื่อแสดงผล
+  isMultiLocationInPeriod: boolean
+  orders: SaleOrder[]
+  expenses: Expense[]
+  summary: FinancialSummary
+}
+
+export interface CategoryAnalyticsItem {
+  category: string
+  quantity: number
+  revenue: number
+  cost: number
+  profit: number
+  orderCount: number
+  quantitySharePct: number
+  revenueSharePct: number
+}
+
+export interface ProductAnalyticsItem {
+  key: string
+  barcode: string
+  name: string
+  category: string
+  quantity: number
+  revenue: number
+  profit: number
+}
+
+export interface PaymentAnalyticsItem {
+  method: 'CASH' | 'PROMPTPAY' | 'THAI_CHUEY_THAI'
+  label: string
+  count: number
+  totalOrderAmount: number
+  customerPaidAmount: number
+  sharePct: number
+}
+
+export interface AnalyticsReport {
+  summary: FinancialSummary
+  totalUnitsSold: number
+  availableLocations: string[]
+  hasUnnamedRecords: boolean
+  topCategories: CategoryAnalyticsItem[]
+  topProducts: ProductAnalyticsItem[]
+  paymentBreakdown: PaymentAnalyticsItem[]
 }
