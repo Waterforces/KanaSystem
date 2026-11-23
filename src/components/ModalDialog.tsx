@@ -37,11 +37,20 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
     if (!dialog) return
 
     if (isOpen) {
-      if (!dialog.open) {
-        dialog.showModal()
+      if (typeof dialog.showModal === 'function') {
+        if (!dialog.open) {
+          dialog.showModal()
+        }
+      } else {
+        dialog.setAttribute('data-legacy-modal', 'true')
+        dialog.setAttribute('open', '')
       }
-    } else if (dialog.open) {
-      dialog.close()
+    } else if (dialog.open || dialog.hasAttribute('open')) {
+      if (typeof dialog.close === 'function') {
+        dialog.close()
+      } else {
+        dialog.removeAttribute('open')
+      }
     }
   }, [isOpen])
 
@@ -99,9 +108,11 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
       onPointerUp={handlePointerUp}
       className={`${zIndexClass} ${
         position === 'bottom-sheet' ? 'mt-auto mb-0 mx-auto sm:m-auto' : 'm-auto'
-      } ${panelClassName} max-h-[92dvh] flex-col overflow-hidden text-slate-900 dark:text-slate-100`}
+      } ${panelClassName} modal-max-h overflow-hidden text-slate-900 dark:text-slate-100`}
     >
-      {children}
+      <div className="flex flex-col w-full modal-max-h overflow-hidden">
+        {children}
+      </div>
     </dialog>
   )
 }

@@ -699,7 +699,7 @@ export default function PosPage() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-2 divide-y divide-slate-100 dark:divide-slate-800 max-h-[45dvh]">
+        <div className="flex-auto min-h-0 overflow-y-auto px-5 py-2 divide-y divide-slate-100 dark:divide-slate-800 modal-scroll-45">
           {cart.map((item) => (
             <div key={item.product.barcode} className="py-3 flex items-center justify-between gap-3">
               {item.product.image && (
@@ -870,7 +870,7 @@ export default function PosPage() {
           </button>
         </div>
 
-        <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-950/60 space-y-3.5 flex-1 overflow-y-auto safe-bottom">
+        <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-950/60 space-y-3.5 modal-body-scroll safe-bottom">
           {/* แสดงทำเลที่จะบันทึกติดกับบิลถ้ากรอกไว้ */}
           {shopLocation && (
             <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-xs md:text-sm text-blue-800 dark:text-blue-200 font-semibold">

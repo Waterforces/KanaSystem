@@ -99,7 +99,7 @@ export const ItemDiscountModal: React.FC<ItemDiscountModalProps> = ({
         </button>
       </div>
 
-      <div className="overflow-y-auto flex-1 pr-0.5">
+      <div className="modal-body-scroll pr-0.5">
         {/* ข้อมูลสินค้าที่กำลังลดราคา */}
         <div className="my-4 p-3 md:p-4 bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700 rounded-2xl flex items-center gap-3">
           {item.product.image ? (

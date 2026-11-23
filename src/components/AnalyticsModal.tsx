@@ -164,7 +164,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
       </div>
 
       {/* เนื้อหาการวิเคราะห์ */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-5 max-h-[65dvh]">
+      <div className="flex-auto min-h-0 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-5 modal-scroll-65">
         {/* สรุปยอดรวม */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
           <div className="bg-slate-50 dark:bg-slate-800/70 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700">

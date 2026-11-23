@@ -167,7 +167,7 @@ export const PeriodDetailModal: React.FC<PeriodDetailModalProps> = ({
           </div>
 
           {/* รายการการ์ดวันที่ DD/MM */}
-          <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 max-h-[46dvh]">
+          <div className="flex-auto min-h-0 overflow-y-auto px-4 py-2 space-y-2 modal-scroll-46">
             {dailyCards.length === 0 ? (
               <div className="py-10 text-center text-slate-400 text-xs md:text-base">
                 ไม่มีรายการซื้อขายหรือรายจ่ายในเดือนนี้
@@ -312,7 +312,7 @@ export const PeriodDetailModal: React.FC<PeriodDetailModalProps> = ({
           </div>
 
           {/* รายการบิลขาย / รายจ่ายด้านใน */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-2.5 max-h-[50dvh]">
+          <div className="flex-auto min-h-0 overflow-y-auto p-4 space-y-2.5 modal-scroll-50">
             {activeTab === 'sales' ? (
               visibleOrders.length === 0 ? (
                 <div className="py-10 text-center text-slate-400 text-xs md:text-base">

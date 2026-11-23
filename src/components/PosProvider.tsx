@@ -161,8 +161,8 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         shopLocation,
       }}
     >
-      <div className="h-dvh w-full flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans transition-colors">
-        <div className="flex-1 flex flex-col overflow-hidden relative">{children}</div>
+      <div className="app-shell-h w-full flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans transition-colors">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">{children}</div>
         <BottomNav onOpenScanner={openScannerFromNav} cartItemCount={totalCartItems} />
       </div>
     </PosContext.Provider>

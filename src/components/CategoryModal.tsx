@@ -122,7 +122,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose })
       )}
 
       {/* รายการหมวดหมู่ที่มีอยู่ */}
-      <div className="flex-1 overflow-y-auto mt-4 space-y-2 pr-1 max-h-[45dvh]">
+      <div className="flex-auto min-h-0 overflow-y-auto mt-4 space-y-2 pr-1 modal-scroll-45">
         {categories.map((cat) => (
           <div
             key={cat}
